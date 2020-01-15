@@ -31,13 +31,21 @@ class Blockchain(object):
         """
 
         block = {
-            # TODO
+            'index': len(self.chain) + 1,
+            'timestamp': time(),
+            'tranactions': self.current_transactions,
+            'proof': proof,
+            'previous_hash': previous_hash
+            # could do last in list
+            # 'previous_hash': self.current_transactions[:-1]
         }
 
         # Reset the current list of transactions
+        self.current_transactions = []
         # Append the chain to the block
+        self.chain.append(block)
         # Return the new block
-        pass
+        return block
 
     def hash(block):
         """
@@ -55,9 +63,15 @@ class Blockchain(object):
         # We must make sure that the Dictionary is Ordered,
         # or we'll have inconsistent hashes
 
-        # TODO: Create the block_string
+        # prior to python 3.7, you were not guaranteed to get a consistent order of keys when you refernce a python dictionary
+        # this sorts the keys alphabetically and then created a string version of it
+        # => json.dumps(block, sort_keys=True)
+        # encode turns it into a 'bytes-like' object
+        string_object = json.dumps(block).encode()
 
-        # TODO: Hash this string using sha256
+        raw_hash = hashlib.sha256(string_object)
+
+        hex_hash = raw_hash.hexdigest()
 
         # By itself, the sha256 function returns the hash in a raw string
         # that will likely include escaped characters.
@@ -65,8 +79,7 @@ class Blockchain(object):
         # hash to a string of hexadecimal characters, which is
         # easier to work with and understand
 
-        # TODO: Return the hashed block string in hexadecimal format
-        pass
+        return hex_hash
 
     @property
     def last_block(self):
@@ -127,11 +140,12 @@ def mine():
 @app.route('/chain', methods=['GET'])
 def full_chain():
     response = {
-        # TODO: Return the chain and its current length
+        'length': len(blockchain.chain),
+        'chain': blockchain.chain
     }
     return jsonify(response), 200
 
 
 # Run the program on port 5000
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
