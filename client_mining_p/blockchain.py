@@ -4,6 +4,7 @@ from time import time
 from uuid import uuid4
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS, cross_origin
 
 
 class Blockchain(object):
@@ -101,11 +102,12 @@ class Blockchain(object):
         guess_hash = hashlib.sha256(guess).hexdigest()
 
         # return True or False
-        # return guess_hash[:6] == "000000"
+        return guess_hash[:6] == "000000"
 
 
 # instantiate our Node
 app = Flask(__name__)
+CORS(app)
 
 # generate a globally unique address for this node
 node_identifier = str(uuid4()).replace('-', '')
@@ -114,7 +116,30 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
+@app.route('/transaction/new', methods=['POST'])
+@cross_origin()
+def new_transaction():
+    data = request.get_json()
+
+    required = ['sender', 'recipient', 'amount']
+    if not all(k in data for k in required):
+        response = {
+            'message': 'Bad request'
+        }
+        status_code = 400
+    
+    # create new transaction
+    blockchain.new_transaction(data['sender'], data['recipient'], data['amount'])
+    response = {
+        'message': f'Transaction will post to block {index}'
+    }
+    status_code = 201
+
+    return jsonify(response), status_code
+
+
 @app.route('/mine', methods=['POST'])
+@cross_origin()
 def mine():
     
     data = request.get_json()
@@ -132,6 +157,12 @@ def mine():
             hex_hash = raw_hash.hexdigest()
 
             block = blockchain.new_block(data['proof'], hex_hash)
+            blockchain.new_transaction(
+                sender="0",
+                recipient=data['id'],
+                amount=10
+            )
+
             response = {
                 'message': 'New Block Forged'
             }
@@ -151,6 +182,7 @@ def mine():
 
 
 @app.route('/chain', methods=['GET'])
+@cross_origin()
 def full_chain():
     response = {
         'length': len(blockchain.chain),
@@ -160,6 +192,7 @@ def full_chain():
 
 
 @app.route('/last_block', methods=['GET'])
+@cross_origin()
 def last_block():
     response = {
         'last_block': blockchain.last_block
