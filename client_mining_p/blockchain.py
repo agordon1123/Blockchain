@@ -66,7 +66,7 @@ class Blockchain(object):
         # => json.dumps(block, sort_keys=True)
         # encode turns it into a 'bytes-like' object
 
-        string_object = json.dumps(block).encode()
+        string_object = json.dumps(block, sort_keys=True).encode()
 
         raw_hash = hashlib.sha256(string_object)
 
@@ -97,10 +97,16 @@ class Blockchain(object):
         :return: True if the resulting hash is a valid proof, False otherwise
         """
         
-        guess = f"{block_string}{proof}".encode()
+        guess = block_string + str(proof)
+        guess = guess.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         # return True or False
-        return guess_hash[:3] == "000000"
+        # return guess_hash[:6] == "000000"
+        if guess_hash[:3] == "000":
+            print("********** true")
+            print(guess_hash)
+        return guess_hash[:3] == "000"
+
 
 
 # instantiate our Node
@@ -119,31 +125,24 @@ def mine():
     data = request.get_json()
 
     if data['id'] and data['proof']:
+        # checking last_hash in real time
         last_hash = blockchain.last_block['previous_hash']
-        
-        # check if id in request matches last_hash
-        if last_hash == int(data['id']):
-            block_string = blockchain.hash(blockchain.last_block)
-            # run the proof against the proof of work algorithm
-            if blockchain.valid_proof(block_string, data['proof']):
-                # forge the new Block by adding it to the chain with the proof
-                block = blockchain.new_block(data['proof'], last_hash)
-                # winner
-                response = {
-                    'message': 'Winner! New block created!'
-                }
-                status_code = 201
-            else:
-                response = {
-                    'message': 'Incorrect proof. Try again!'
-                }
-                status_code = 200
+        block_string = blockchain.hash(blockchain.last_block)
+        print("!!!!!!!!!!", data['proof'])
+        print("******", blockchain.valid_proof(block_string, data['proof']))
+        # run the proof against the proof of work algorithm
+        if blockchain.valid_proof(block_string, data['proof']):
+            # forge the new Block by adding it to the chain with the proof
+            block = blockchain.new_block(data['proof'], last_hash)
+            response = {
+                'message': 'New Block Forged'
+            }
+            status_code = 201
         else:
             response = {
-                'message': 'Incorrect ID for last block'
+                'message': 'Incorrect proof. Try again!'
             }
-            status_code = 406
-
+            status_code = 200
     else:
         response = {
             'message': 'Bad request'
