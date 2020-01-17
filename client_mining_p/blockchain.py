@@ -34,7 +34,7 @@ class Blockchain(object):
         block = {
             'index': len(self.chain) + 1,
             'timestamp': time(),
-            'tranactions': self.current_transactions,
+            'transactions': self.current_transactions,
             'proof': proof,
             'previous_hash': previous_hash
         }
@@ -104,6 +104,23 @@ class Blockchain(object):
         # return True or False
         return guess_hash[:6] == "000000"
 
+    def new_transaction(self, sender, recipient, amount):
+        """
+        Creates a new transaction to go into the next mined block
+        :param sender: <str> Name of the sender
+        :param recipient: <str> Name of the recipient
+        :param amount: <float> Amount the sender has sent
+        :return: <index> The index of the block that will hold the transaction
+        """
+
+        self.current_transactions.append({
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount
+        })
+
+        return self.last_block['index'] + 1
+
 
 # instantiate our Node
 app = Flask(__name__)
@@ -127,13 +144,13 @@ def new_transaction():
             'message': 'Bad request'
         }
         status_code = 400
-    
-    # create new transaction
-    blockchain.new_transaction(data['sender'], data['recipient'], data['amount'])
-    response = {
-        'message': f'Transaction will post to block {index}'
-    }
-    status_code = 201
+    else:
+        # create new transaction
+        index = blockchain.new_transaction(data['sender'], data['recipient'], data['amount'])
+        response = {
+            'message': f'Transaction will post to block {index}'
+        }
+        status_code = 201
 
     return jsonify(response), status_code
 
@@ -157,14 +174,12 @@ def mine():
             hex_hash = raw_hash.hexdigest()
 
             block = blockchain.new_block(data['proof'], hex_hash)
-            blockchain.new_transaction(
-                sender="0",
-                recipient=data['id'],
-                amount=10
-            )
+            
+            blockchain.new_transaction("0", data['id'], 10)
 
             response = {
-                'message': 'New Block Forged'
+                'message': 'New block forged.',
+                'new_block': block
             }
             status_code = 201
         else:
